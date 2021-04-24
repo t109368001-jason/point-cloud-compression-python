@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 
+import numpy as np
 from tqdm import tqdm
 
 from src.octree.OctreeBranch import OctreeBranch
@@ -31,3 +32,12 @@ class Octree:
                 self.root_node.parent = new_root_node
                 self.root_node = new_root_node
             self.root_node.insert_point(point, store_in_leaf)
+
+    def serialize(self) -> (np.ndarray, int, List[float], float):
+        bit_pattern_list = self.root_node.serialize()
+        return bit_pattern_list, self.resolution, self.root_node.depth, self.root_node.origin, self.root_node.size
+
+    def deserialize(self, bit_pattern_list, resolution, depth, origin, size) -> (np.ndarray, int, List[float], float):
+        self.resolution = resolution
+        self.root_node = OctreeBranch(depth, origin, size, None)
+        self.root_node.deserialize(bit_pattern_list)

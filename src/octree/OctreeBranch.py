@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+import numpy as np
+
 from src.octree.OctreeLeaf import OctreeLeaf
 from src.octree.OctreeNode import OctreeNode
 
@@ -62,3 +64,28 @@ class OctreeBranch(OctreeNode):
             children: List[OctreeBranch]
             self.children: List[OctreeBranch]
             self.children[index] = children
+
+    def get_bit_pattern(self) -> np.uint8:
+        bit_pattern = np.array(self.children)
+        bit_pattern = np.not_equal(bit_pattern, None)
+        bit_pattern = np.packbits(bit_pattern, axis=0, bitorder='little').astype(np.uint8)
+        return bit_pattern[0]
+
+    def serialize(self):
+        bit_pattern_list = list()
+        bit_pattern_list.append(self.get_bit_pattern())
+        if self.depth == 1:
+            return bit_pattern_list
+        for children in self.children:
+            if children is not None:
+                bit_pattern_list.extend(children.serialize())
+        return bit_pattern_list
+
+    def deserialize(self, bit_pattern_list):
+        bit_pattern = np.unpackbits(bit_pattern_list.pop(0), axis=0, bitorder='little')
+        for index, bit in enumerate(bit_pattern):
+            if bit == 1:
+                self.init_children(index)
+                if self.depth > 1:
+                    self.children: List[OctreeBranch]
+                    self.children[index].deserialize(bit_pattern_list)
