@@ -3,8 +3,7 @@ import numpy as np
 
 class Bound:
     def __init__(self, origin: list = None, size: float = None):
-        self.origin = origin if isinstance(origin,
-                                           list) else [x for x in origin[0:3]]
+        self.origin = origin if isinstance(origin, list) else [x for x in origin[0:3]]
         self.size = size
 
     def in_bound(self, point: np.ndarray) -> bool:

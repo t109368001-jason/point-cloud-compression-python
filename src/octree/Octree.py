@@ -12,32 +12,40 @@ class Octree:
         self.resolution = resolution
         self.root_node: Optional[OctreeBranch] = None
 
-    def insert_points(self, points, store_in_leaf=False) -> None:
+    def insert_points(self, points, store_in_leaf=False, *args, **kwargs) -> None:
         for point in tqdm(points, desc="Inserting"):
             if self.root_node is None:
-                new_leaf = OctreeLeaf(0, point, self.resolution, None)
-                new_bound = new_leaf.get_expend_bound(point)
-                self.root_node = OctreeBranch(1, new_bound.origin,
-                                              new_bound.size, None)
-                new_index = new_bound.get_index(point)
-                new_leaf.parent = self.root_node
-                self.root_node.set_children(new_index, new_leaf)
+                self.init_root_node(point, *args, **kwargs)
             elif not self.root_node.in_bound(point):
-                new_bound = self.root_node.get_expend_bound(point)
-                new_root_node = OctreeBranch(self.root_node.depth + 1,
-                                             new_bound.origin, new_bound.size,
-                                             None)
-                new_index = new_bound.get_index(self.root_node.origin)
-                new_root_node.set_children(new_index, self.root_node)
-                self.root_node.parent = new_root_node
-                self.root_node = new_root_node
-            self.root_node.insert_point(point, store_in_leaf)
+                self.expend_tree(point, *args, **kwargs)
+            self.root_node.insert_point(point, store_in_leaf, *args, **kwargs)
 
-    def serialize(self) -> (np.ndarray, int, List[float], float):
-        bit_pattern_list = self.root_node.serialize()
+    def expend_tree(self, point, *args, **kwargs):
+        new_bound = self.root_node.get_expend_bound(point)
+        new_root_node = self.create_root_node(self.root_node.depth + 1, new_bound)
+        new_index = new_bound.get_index(self.root_node.origin)
+        new_root_node.set_children(new_index, self.root_node, *args, **kwargs)
+        self.root_node.parent = new_root_node
+        self.root_node = new_root_node
+
+    def init_root_node(self, point, *args, **kwargs):
+        new_leaf = OctreeLeaf(0, point, self.resolution, None)
+        new_bound = new_leaf.get_expend_bound(point)
+        self.root_node = OctreeBranch(1, new_bound.origin, new_bound.size, None)
+        self.root_node = self.create_root_node(1, new_bound)
+        new_index = new_bound.get_index(point)
+        new_leaf.parent = self.root_node
+        self.root_node.set_children(new_index, new_leaf, *args, **kwargs)
+
+    def create_root_node(self, depth, new_bound):
+        return OctreeBranch(depth, new_bound.origin, new_bound.size, None)
+
+    def serialize(self, *args, **kwargs) -> (np.ndarray, int, List[float], float):
+        bit_pattern_list = self.root_node.serialize(*args, **kwargs)
         return bit_pattern_list, self.resolution, self.root_node.depth, self.root_node.origin, self.root_node.size
 
-    def deserialize(self, bit_pattern_list, resolution, depth, origin, size) -> (np.ndarray, int, List[float], float):
+    def deserialize(self, bit_pattern_list, resolution, depth, origin, size, *args,
+                    **kwargs) -> (np.ndarray, int, List[float], float):
         self.resolution = resolution
         self.root_node = OctreeBranch(depth, origin, size, None)
-        self.root_node.deserialize(bit_pattern_list)
+        self.root_node.deserialize(bit_pattern_list, *args, **kwargs)
