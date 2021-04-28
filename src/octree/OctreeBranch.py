@@ -53,19 +53,16 @@ class OctreeBranch(OctreeNode):
                 return True
         return False
 
-    # noinspection PyUnusedLocal
     def get_children(self, index, *args, **kwargs):
         children: Union[OctreeLeaf, OctreeBranch]
         children = self._children[index]
         return children
 
-    # noinspection PyUnusedLocal
     def get_children_list(self, *args, **kwargs):
         children: List[Union[OctreeLeaf, OctreeBranch]]
         children = self._children
         return children
 
-    # noinspection PyUnusedLocal
     def set_children(self, index, children: OctreeNode, *args, **kwargs):
         if self.depth == 1:
             children: List[OctreeLeaf]

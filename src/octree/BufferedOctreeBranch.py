@@ -45,7 +45,6 @@ class BufferedOctreeBranch(OctreeBranch):
     def has_children(self, selected_buffer=None, *args, **kwargs):
         return super().has_children(selected_buffer=selected_buffer)
 
-    # noinspection PyUnusedLocal
     def get_children(self, index, selected_buffer=None, *args, **kwargs):
         selected: List[Optional[Union[OctreeLeaf, BufferedOctreeBranch]]]
         selected = self._children[selected_buffer]
@@ -55,7 +54,6 @@ class BufferedOctreeBranch(OctreeBranch):
         children = selected[index]
         return children
 
-    # noinspection PyUnusedLocal
     def get_children_list(self, selected_buffer=None, *args, **kwargs):
         selected = self._children[selected_buffer]
         return selected or [None] * 8
@@ -65,7 +63,6 @@ class BufferedOctreeBranch(OctreeBranch):
             return 0
         return len(self._children)
 
-    # noinspection PyUnusedLocal
     def set_children(self, index, children: OctreeNode, selected_buffer=None, *args, **kwargs):
         selected: List[Optional[OctreeLeaf, OctreeBranch]]
         selected = self._children[selected_buffer]
