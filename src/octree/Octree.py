@@ -16,7 +16,7 @@ class Octree:
         for point in tqdm(points, desc="Inserting"):
             if self.root_node is None:
                 self.init_root_node(point, *args, **kwargs)
-            elif not self.root_node.in_bound(point):
+            while not self.root_node.in_bound(point):
                 self.expend_tree(point, *args, **kwargs)
             self.root_node.insert_point(point, store_in_leaf, *args, **kwargs)
 
