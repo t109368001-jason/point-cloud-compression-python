@@ -17,6 +17,15 @@ class BufferedOctree(Octree):
         selected_buffer = selected_buffer if selected_buffer is not None else self.selected_buffer
         super().insert_points(points, store_in_leaf, selected_buffer=selected_buffer)
 
+    def expend_tree(self, point, selected_buffer=None, *args, **kwargs):
+        super().expend_tree(point, selected_buffer=selected_buffer, *args, **kwargs)
+        for index, children in enumerate(self.root_node.get_children_list(selected_buffer=selected_buffer)):
+            if children is not None:
+                for i in range(self.buffer_size):
+                    if i == selected_buffer:
+                        continue
+                    self.root_node.set_children(index, children, selected_buffer=i)
+
     def create_root_node(self, depth, new_bound):
         return BufferedOctreeBranch(depth, new_bound.origin, new_bound.size, None, self.buffer_size)
 
