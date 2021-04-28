@@ -56,7 +56,7 @@ class BufferedOctreeBranch(OctreeBranch):
 
     def get_children_list(self, selected_buffer=None, *args, **kwargs):
         selected = self._children[selected_buffer]
-        return selected or [None] * 8
+        return selected if selected is not None else [None] * 8
 
     def get_buffer_size(self):
         if self._children is None:
@@ -87,3 +87,22 @@ class BufferedOctreeBranch(OctreeBranch):
 
     def deserialize(self, bit_pattern_list: list, selected_buffer=None, *args, **kwargs):
         super().deserialize(bit_pattern_list, selected_buffer=selected_buffer)
+
+    def diff(self, selected_buffer1, selected_buffer2, *args, **kwargs):
+        other: Optional[BufferedOctreeBranch]
+        if self.depth == 1:
+            bit_pattern_list = self.get_bit_pattern_list(selected_buffer=selected_buffer1, *args, **kwargs)
+            return np.sum(
+                np.abs(bit_pattern_list - self.get_bit_pattern_list(selected_buffer=selected_buffer2, *args, **kwargs)))
+        else:
+            diff = 0
+            for i in range(8):
+                children1: Optional[BufferedOctreeBranch]
+                children2: Optional[BufferedOctreeBranch]
+                children1 = self.get_children(i, selected_buffer=selected_buffer1, *args, **kwargs)
+                children2 = self.get_children(i, selected_buffer=selected_buffer2, *args, **kwargs)
+                if children1 is not None:
+                    diff += children1.diff(selected_buffer1, selected_buffer2, *args, **kwargs)
+                elif children2 is not None:
+                    diff += children2.diff(selected_buffer1, selected_buffer2, *args, **kwargs)
+            return diff
