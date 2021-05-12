@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List
 
 import numpy as np
@@ -31,7 +32,8 @@ class BufferedOctree(Octree):
 
     def serialize(self, selected_buffer=None) -> (np.ndarray, int, List[float], float):
         selected_buffer = selected_buffer if selected_buffer is not None else self.selected_buffer
-        return super().serialize(selected_buffer=selected_buffer)
+        result = super().serialize(selected_buffer=selected_buffer)
+        return result
 
     def deserialize(self,
                     bit_pattern_list,
@@ -44,3 +46,18 @@ class BufferedOctree(Octree):
                     **kwargs) -> (np.ndarray, int, List[float], float):
         selected_buffer = selected_buffer if selected_buffer is not None else self.selected_buffer
         super().deserialize(bit_pattern_list, resolution, depth, origin, size, selected_buffer=selected_buffer)
+
+    def motion_estimation(self, depth, selected_buffer_i, selected_buffer_f):
+        logging.info("start")
+        bit_pattern_list = self.root_node.serialize(depth=depth + 1, selected_buffer=selected_buffer_f)
+        indices = self.root_node.motion_estimation(depth, selected_buffer_i, selected_buffer_f)
+        logging.info("end")
+        return bit_pattern_list, indices
+
+    def motion_compensation(self, depth, bit_pattern_list, indices_list, selected_buffer_i, selected_buffer_p):
+        logging.info("start")
+        self.root_node.deserialize(depth=depth + 1, bit_pattern_list=bit_pattern_list,
+                                   selected_buffer=selected_buffer_p)
+        self.root_node.motion_compensation(depth=depth, indices=indices_list, selected_buffer_i=selected_buffer_i,
+                                           selected_buffer_p=selected_buffer_p)
+        logging.info("end")

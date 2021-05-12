@@ -1,3 +1,5 @@
+import logging
+import time
 from typing import Optional, List
 
 import numpy as np
@@ -13,12 +15,15 @@ class Octree:
         self.root_node: Optional[OctreeBranch] = None
 
     def insert_points(self, points, store_in_leaf=False, *args, **kwargs) -> None:
+        logging.info("start")
+        time.sleep(0.1)
         for point in tqdm(points, desc="Inserting"):
             if self.root_node is None:
                 self.init_root_node(point, *args, **kwargs)
             while not self.root_node.in_bound(point):
                 self.expend_tree(point, *args, **kwargs)
             self.root_node.insert_point(point, store_in_leaf, *args, **kwargs)
+        logging.info("end")
 
     def expend_tree(self, point, *args, **kwargs):
         new_bound = self.root_node.get_expend_bound(point)

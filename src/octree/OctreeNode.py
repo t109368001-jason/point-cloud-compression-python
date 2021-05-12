@@ -20,3 +20,9 @@ class OctreeNode(Bound):
 
     def deserialize(self, bit_pattern_list: list, *args, **kwargs):
         raise NotImplementedError()
+
+    def to_points(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def clear(self, *args, **kwargs):
+        raise NotImplementedError()

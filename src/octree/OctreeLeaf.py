@@ -29,3 +29,10 @@ class OctreeLeaf(OctreeNode):
     def deserialize(self, bit_pattern_list: list, *args, **kwargs):
         # TODO
         return
+
+    def to_points(self, *args, **kwargs):
+        return [self.origin]
+
+    def clear(self, *args, **kwargs):
+        # TODO
+        return

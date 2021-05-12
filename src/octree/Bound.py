@@ -6,6 +6,14 @@ class Bound:
         self.origin = origin if isinstance(origin, list) else [x for x in origin[0:3]]
         self.size = size
 
+    def out_bound(self, bound):
+        bound: Bound
+        if self.get_min_x() > bound.get_max_x() or self.get_max_x() < bound.get_min_x():
+            if self.get_min_y() > bound.get_max_y() or self.get_max_y() < bound.get_min_y():
+                if self.get_min_z() > bound.get_max_z() or self.get_max_z() < bound.get_min_z():
+                    return True
+        return False
+
     def in_bound(self, point: np.ndarray) -> bool:
         if self.origin is None:
             raise ValueError("center is None")

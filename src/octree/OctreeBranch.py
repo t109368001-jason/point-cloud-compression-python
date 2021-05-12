@@ -63,7 +63,7 @@ class OctreeBranch(OctreeNode):
         children = self._children
         return children
 
-    def set_children(self, index, children: OctreeNode, *args, **kwargs):
+    def set_children(self, index, children: Optional[OctreeNode], *args, **kwargs):
         if self.depth == 1:
             children: List[OctreeLeaf]
             self._children: List[OctreeLeaf]
@@ -83,28 +83,49 @@ class OctreeBranch(OctreeNode):
         bit_pattern = np.packbits(bit_pattern_list, axis=0, bitorder='little').astype(np.uint8)
         return bit_pattern[0]
 
-    def serialize(self, *args, **kwargs) -> Optional[list]:
+    def serialize(self, depth=None, *args, **kwargs) -> Optional[list]:
         bit_pattern_list = list()
         bit_pattern_list.append(self.get_bit_pattern(*args, **kwargs))
+        if (depth is not None) and (self.depth <= depth):
+            return bit_pattern_list
         for children in self.get_children_list(*args, **kwargs):
             if children is not None:
                 if self.depth == 1:
                     children: OctreeLeaf
-                    bit_pattern_list.extend(children.serialize(*args, **kwargs))
+                    bit_pattern_list.extend(children.serialize(depth=depth, *args, **kwargs))
                 else:
                     children: OctreeBranch
-                    bit_pattern_list.extend(children.serialize(*args, **kwargs))
+                    bit_pattern_list.extend(children.serialize(depth=depth, *args, **kwargs))
         return bit_pattern_list
 
-    def deserialize(self, bit_pattern_list: list, *args, **kwargs):
-        bit_pattern = np.unpackbits(bit_pattern_list.pop(0), axis=0, bitorder='little')
+    def deserialize(self, bit_pattern_list: list, depth=None, *args, **kwargs):
+        bit_pattern = np.unpackbits(np.uint8(bit_pattern_list.pop(0)), axis=0, bitorder='little')
+        if (depth is not None) and (self.depth < depth):
+            return
         for index, bit in enumerate(bit_pattern):
             if bit == 1:
                 self.init_children(index, *args, **kwargs)
+                if (depth is not None) and (self.depth <= depth):
+                    continue
                 children = self.get_children(index, *args, **kwargs)
                 if self.depth == 1:
                     children: OctreeLeaf
-                    children.deserialize(bit_pattern_list, *args, **kwargs)
+                    children.deserialize(bit_pattern_list, depth=depth, *args, **kwargs)
                 else:
                     children: OctreeBranch
-                    children.deserialize(bit_pattern_list, *args, **kwargs)
+                    children.deserialize(bit_pattern_list, depth=depth, *args, **kwargs)
+
+    def to_points(self, *args, **kwargs):
+        points = []
+        for children in self.get_children_list(*args, **kwargs):
+            if children is not None:
+                children_points = children.to_points(*args, **kwargs)
+                points.extend(children_points)
+        return points
+
+    def clear(self, *args, **kwargs):
+        for index, children in enumerate(self.get_children_list(*args, **kwargs)):
+            if children is not None:
+                children.clear(*args, **kwargs)
+                children.parent = None
+            self.set_children(index, None, *args, **kwargs)
