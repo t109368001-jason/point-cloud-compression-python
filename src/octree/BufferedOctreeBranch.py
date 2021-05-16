@@ -108,8 +108,10 @@ class BufferedOctreeBranch(OctreeBranch):
     def diff(self, branch, selector, selector1, *args, **kwargs):
         branch: BufferedOctreeBranch
         if self.depth == 1:
-            bit_pattern_list = branch.get_bit_pattern_list(selector=selector1, *args, **kwargs)
-            return np.sum(np.abs(bit_pattern_list - self.get_bit_pattern_list(selector=selector, *args, **kwargs)))
+            bit_pattern_list = self.get_bit_pattern_list(selector=selector, *args, **kwargs)
+            bit_pattern_list_ = branch.get_bit_pattern_list(selector=selector1, *args, **kwargs)
+            diff = [abs(bit - bit_) for bit, bit_ in zip(bit_pattern_list, bit_pattern_list_)]
+            return sum(diff)
         else:
             diff = 0
             for i in range(8):
@@ -153,10 +155,10 @@ class BufferedOctreeBranch(OctreeBranch):
     def motion_estimation(self, depth, selector_i, selector_f):
         indices = []
         if self.depth == depth:
-            diff, indices = self.get_root_node().find_min_diff_indices(self,
-                                                                       selector_i=selector_i,
-                                                                       selector_f=selector_f)
-            indices.extend(indices)
+            diff, indices_ = self.get_root_node().find_min_diff_indices(self,
+                                                                        selector_i=selector_i,
+                                                                        selector_f=selector_f)
+            indices.extend(indices_)
         else:
             for children in self.get_children_list(selector=selector_f):
                 if children is not None:
