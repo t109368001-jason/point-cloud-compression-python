@@ -58,9 +58,9 @@ def main():
             logging.config.fileConfig(log_config_path)
     logging.info("start")
 
-    selected_buffer_i = 0
-    selected_buffer_f = 1
-    selected_buffer_p = 2
+    selector_i = 0
+    selector_f = 1
+    selector_p = 2
 
     point_cloud_i: o3d.geometry.PointCloud = o3d.io.read_point_cloud("../dataset/redandblack_vox10_1450.ply")
     point_cloud_f: o3d.geometry.PointCloud = o3d.io.read_point_cloud("../dataset/redandblack_vox10_1451.ply")
@@ -85,19 +85,16 @@ def main():
 
     for resolution, depth_list in resolution_depth_dict.items():
         buffered_octree = BufferedOctree(resolution=resolution, buffer_size=3)
-        buffered_octree.insert_points(points_i, selected_buffer=selected_buffer_i)
-        buffered_octree.insert_points(points_f, selected_buffer=selected_buffer_f)
-        logging.info(
-            "buffered_octree.root_node(depth={}, origin={}, size={})".format(buffered_octree.root_node.depth,
-                                                                             buffered_octree.root_node.origin,
-                                                                             buffered_octree.root_node.size))
+        buffered_octree.insert_points(points_i, selector=selector_i)
+        buffered_octree.insert_points(points_f, selector=selector_f)
+        logging.info("buffered_octree.root_node(depth={}, origin={}, size={})".format(
+            buffered_octree.root_node.depth, buffered_octree.root_node.origin, buffered_octree.root_node.size))
         for depth in depth_list:
             if buffered_octree.root_node.depth <= depth:
                 continue
-            buffered_octree.root_node.clear(selected_buffer=selected_buffer_p)
+            buffered_octree.root_node.clear(selector=selector_p)
             encoding_start = time.time()
-            bit_pattern_list, indices = buffered_octree.motion_estimation(depth, selected_buffer_i,
-                                                                          selected_buffer_f)
+            bit_pattern_list, indices = buffered_octree.motion_estimation(depth, selector_i, selector_f)
             encoding_end = time.time()
             encoding_time = encoding_end - encoding_start
 
@@ -106,23 +103,22 @@ def main():
             depth, bit_pattern_list, indices = load('output.txt')
 
             decoding_start = time.time()
-            buffered_octree.motion_compensation(depth, bit_pattern_list, indices, selected_buffer_i,
-                                                selected_buffer_p)
+            buffered_octree.motion_compensation(depth, bit_pattern_list, indices, selector_i, selector_p)
             decoding_end = time.time()
             decoding_time = decoding_end - decoding_start
 
-            points_i_t = buffered_octree.root_node.to_points(selected_buffer=selected_buffer_i)
-            points_f_t = buffered_octree.root_node.to_points(selected_buffer=selected_buffer_f)
-            points_p_t = buffered_octree.root_node.to_points(selected_buffer=selected_buffer_p)
+            points_i_t = buffered_octree.root_node.to_points(selector=selector_i)
+            points_f_t = buffered_octree.root_node.to_points(selector=selector_f)
+            points_p_t = buffered_octree.root_node.to_points(selector=selector_p)
             mse_fp, mse_pf = mse_calc(points_f, points_p_t)
             psnr_fp = 10 * np.log10(max_value_range * max_value_range / mse_fp)
             psnr_pf = 10 * np.log10(max_value_range * max_value_range / mse_pf)
             with open('result.csv', 'a') as result_csv:
                 result_csv.write(
                     CSV_FMT.format(resolution, depth, mse_fp, mse_pf, psnr_fp, psnr_pf, encoding_time, decoding_time,
-                                   bytes_len,
-                                   buffered_octree.root_node.depth, points_i_len, points_f_len,
+                                   bytes_len, buffered_octree.root_node.depth, points_i_len, points_f_len,
                                    len(points_i_t), len(points_f_t), len(points_p_t)))
+            logging.info("encoding_time={}, decoding_time={}".format(encoding_time, decoding_time))
 
 
 def mse_calc(points1, points2):
@@ -142,8 +138,9 @@ def save(filename, depth, bit_pattern_list, indices):
     indices_byte = np.unpackbits(indices, axis=1, bitorder='little')
     indices_byte = np.array([index[:3] for index in indices_byte])
     indices_byte = indices_byte.flatten()
-    indices_byte_padded = np.append(indices_byte, np.zeros(
-        shape=int(np.ceil(indices_byte.shape[0] / 8) * 8 - indices_byte.shape[0]))).astype(np.uint8)
+    indices_byte_padded = np.append(indices_byte,
+                                    np.zeros(shape=int(np.ceil(indices_byte.shape[0] / 8) * 8 -
+                                                       indices_byte.shape[0]))).astype(np.uint8)
     indices_byte_padded = indices_byte_padded.reshape(int(indices_byte_padded.shape[0] / 8), 8)
     indices_uint8 = np.packbits(indices_byte_padded, axis=1, bitorder='little').astype(np.uint8)
     indices_uint8 = indices_uint8.reshape(indices_uint8.shape[0])

@@ -26,3 +26,9 @@ class OctreeNode(Bound):
 
     def clear(self, *args, **kwargs):
         raise NotImplementedError()
+
+    def get_root_node(self):
+        branch = self
+        while branch.parent is not None:
+            branch = branch.parent
+        return branch

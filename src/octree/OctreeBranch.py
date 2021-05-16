@@ -129,3 +129,11 @@ class OctreeBranch(OctreeNode):
                 children.clear(*args, **kwargs)
                 children.parent = None
             self.set_children(index, None, *args, **kwargs)
+
+    def get_by_indices(self, indices, depth, *args, **kwargs):
+        if len(indices) == 0:
+            return self
+        if self.depth == depth:
+            return self
+        index = indices.pop(0)
+        return self.get_children(index, *args, **kwargs).get_by_indices(indices, depth, *args, **kwargs)
