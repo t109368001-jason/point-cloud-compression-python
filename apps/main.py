@@ -1,5 +1,6 @@
 import logging
 import logging.config
+import math
 import os
 import struct
 import time
@@ -9,6 +10,7 @@ import open3d as o3d
 from scipy import spatial
 
 from src.octree.BufferedOctree import BufferedOctree
+from src.octree.BufferedOctreeBranch import BufferedOctreeBranch
 
 CSV_HEADER = "Resolution,Depth,MSE FP, MSE PF,PSNR FP,PSNR PF,Encoding Time,Decoding Time,Bytes,Tree Depth,Points (I),Points (F),Tree Points (I),Tree Points (F),Tree Points (P)\n"
 CSV_FMT = "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n"
@@ -22,33 +24,32 @@ CSV_FMT = "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n"
 #     1: [8, 7, 6],
 # }
 
-# resolution_depth_dict = {
-#     32: [3, 2, 1],
-#     20: [3, 2, 1],
-#     16: [4, 3, 2],
-#     15: [4, 3, 2],
-#     10: [5, 4, 3],
-#     8: [5, 4, 3],
-#     5: [6, 5, 4],
-#     4: [6, 5, 4],
-#     3: [7, 6, 5],
-#     2: [7, 6, 5],
-#     1.5: [8, 7, 6],
-#     1: [8, 7, 6],
-# }
-
 resolution_depth_dict = {
-    16: [1],
-    15: [1],
-    10: [2, 1],
-    8: [2, 1],
-    5: [3, 2, 1],
-    4: [3, 2, 1],
-    3: [4, 3, 2, 1],
-    2: [4, 3, 2, 1],
-    1.5: [5, 4, 3, 2, 1],
-    1: [5, 4, 3, 2, 1],
+    32: [3, 2, 1],
+    20: [3, 2, 1],
+    16: [4, 3, 2, 1],
+    15: [4, 3, 2, 1],
+    10: [5, 4, 3, 2],
+    8: [5, 4, 3, 2],
+    5: [6, 5, 4, 3],
+    4: [6, 5, 4],
+    3: [7, 6, 5],
+    2: [7, 6],
+    1: [8],
 }
+
+# resolution_depth_dict = {
+#     16: [1],
+#     15: [1],
+#     10: [2, 1],
+#     8: [2, 1],
+#     5: [3, 2, 1],
+#     4: [3, 2, 1],
+#     3: [4, 3, 2, 1],
+#     2: [4, 3, 2, 1],
+#     1.5: [5, 4, 3, 2, 1],
+#     1: [5, 4, 3, 2, 1],
+# }
 
 
 def main():
@@ -58,6 +59,7 @@ def main():
             logging.config.fileConfig(log_config_path)
     logging.info("start")
 
+    buffer_size = 3
     selector_i = 0
     selector_f = 1
     selector_p = 2
@@ -66,25 +68,31 @@ def main():
     point_cloud_f: o3d.geometry.PointCloud = o3d.io.read_point_cloud("../dataset/redandblack_vox10_1451.ply")
     points_i = np.asarray(point_cloud_i.points)
     points_f = np.asarray(point_cloud_f.points)
+    # points_i = np.asarray(point_cloud_i.points)[:10000]
+    # points_f = np.asarray(point_cloud_f.points)[:10000]
 
-    max_value_range = np.max([
-        np.max(points_i[:, 0]) - np.min(points_i[:, 0]),
-        np.max(points_i[:, 1]) - np.min(points_i[:, 1]),
-        np.max(points_i[:, 2]) - np.min(points_i[:, 2]),
-        np.max(points_f[:, 0]) - np.min(points_f[:, 0]),
-        np.max(points_f[:, 1]) - np.min(points_f[:, 1]),
-        np.max(points_f[:, 2]) - np.min(points_f[:, 2]),
-    ])
+    xmax = max(np.max(points_i[:, 0]), np.max(points_f[:, 0]))
+    ymax = max(np.max(points_i[:, 1]), np.max(points_f[:, 1]))
+    zmax = max(np.max(points_i[:, 2]), np.max(points_f[:, 2]))
+    xmin = min(np.min(points_i[:, 0]), np.min(points_f[:, 0]))
+    ymin = min(np.min(points_i[:, 1]), np.min(points_f[:, 1]))
+    zmin = min(np.min(points_i[:, 2]), np.min(points_f[:, 2]))
+    max_value_range = max((xmax - xmin), (ymax - ymin), (zmax - zmin))
 
     points_i_len = points_i.shape[0]
-    points_f_len = points_i.shape[0]
+    points_f_len = points_f.shape[0]
 
     if not os.path.exists('result.csv'):
         with open('result.csv', 'a') as result_csv:
             result_csv.write(CSV_HEADER)
 
     for resolution, depth_list in resolution_depth_dict.items():
-        buffered_octree = BufferedOctree(resolution=resolution, buffer_size=3)
+        buffered_octree = BufferedOctree(resolution=resolution, buffer_size=buffer_size)
+        tree_depth = math.ceil(math.log2(max_value_range / resolution))
+        size = math.pow(2, tree_depth) * resolution
+        offset = (size - max_value_range) / 2
+        buffered_octree.root_node = BufferedOctreeBranch(tree_depth, [xmin - offset, ymin - offset, zmin - offset],
+                                                         size, None, buffer_size)
         buffered_octree.insert_points(points_i, selector=selector_i)
         buffered_octree.insert_points(points_f, selector=selector_f)
         logging.info("buffered_octree.root_node(depth={}, origin={}, size={})".format(

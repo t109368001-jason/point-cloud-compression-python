@@ -26,19 +26,19 @@ class BufferedOctreeBranch(OctreeBranch):
             children = OctreeLeaf(self.depth - 1, new_bound.origin, new_bound.size, self)
         else:
             children: BufferedOctreeBranch
-            found_index = -1
+            found_selector = -1
             for i in range(self.get_buffer_size()):
                 if i == selector:
                     continue
                 children = self.get_children(index, selector=i)
                 if children is not None:
-                    found_index = i
-                break
-            if found_index < 0:
+                    found_selector = i
+                    break
+            if found_selector < 0:
                 children = BufferedOctreeBranch(self.depth - 1, new_bound.origin, new_bound.size, self,
                                                 self.get_buffer_size())
             else:
-                children = self.get_children(index, selector=found_index)
+                children = self.get_children(index, selector=found_selector)
         self.set_children(index, children, selector=selector, *args, **kwargs)
         return children
 
@@ -91,7 +91,9 @@ class BufferedOctreeBranch(OctreeBranch):
     def buffer_diff(self, selector1, selector2, *args, **kwargs):
         if self.depth == 1:
             bit_pattern_list = self.get_bit_pattern_list(selector=selector1, *args, **kwargs)
-            return np.sum(np.abs(bit_pattern_list - self.get_bit_pattern_list(selector=selector2, *args, **kwargs)))
+            bit_pattern_list_ = self.get_bit_pattern_list(selector=selector2, *args, **kwargs)
+            diff = [abs(bit - bit_) for bit, bit_ in zip(bit_pattern_list, bit_pattern_list_)]
+            return sum(diff)
         else:
             diff = 0
             for i in range(8):

@@ -74,18 +74,18 @@ class OctreeBranch(OctreeNode):
             self._children[index] = children
 
     def get_bit_pattern_list(self, *args, **kwargs) -> List[int]:
-        return [0 if children is None else 1 for index, children in
-                enumerate(self.get_children_list(*args, **kwargs))]
+        return [0 if children is None else 1 for index, children in enumerate(self.get_children_list(*args, **kwargs))]
 
     def get_bit_pattern(self, *args, **kwargs) -> np.uint8:
-        bit_pattern_list = [0 if children is None else 1*pow(2, index) for index, children in
-         enumerate(self.get_children_list(*args, **kwargs))]
+        bit_pattern_list = [
+            0 if children is None else 1 * pow(2, index)
+            for index, children in enumerate(self.get_children_list(*args, **kwargs))
+        ]
         bit_pattern = sum(bit_pattern_list)
         return np.uint8(bit_pattern)
 
     def serialize(self, depth=None, *args, **kwargs) -> Optional[list]:
-        bit_pattern_list = list()
-        bit_pattern_list.append(self.get_bit_pattern(*args, **kwargs))
+        bit_pattern_list = [self.get_bit_pattern(*args, **kwargs)]
         if (depth is not None) and (self.depth <= depth):
             return bit_pattern_list
         for children in self.get_children_list(*args, **kwargs):
