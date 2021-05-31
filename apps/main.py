@@ -38,6 +38,7 @@ resolution_depth_dict = {
     1: [8],
 }
 
+
 # resolution_depth_dict = {
 #     16: [1],
 #     15: [1],
@@ -86,35 +87,50 @@ def main():
         with open('result.csv', 'a') as result_csv:
             result_csv.write(CSV_HEADER)
 
+    # For each test resolution
     for resolution, depth_list in resolution_depth_dict.items():
+        # Create BufferedOctree
         buffered_octree = BufferedOctree(resolution=resolution, buffer_size=buffer_size)
         tree_depth = math.ceil(math.log2(max_value_range / resolution))
         size = math.pow(2, tree_depth) * resolution
         offset = (size - max_value_range) / 2
         buffered_octree.root_node = BufferedOctreeBranch(tree_depth, [xmin - offset, ymin - offset, zmin - offset],
                                                          size, None, buffer_size)
+
+        # Put I-Frame to buffer
         buffered_octree.insert_points(points_i, selector=selector_i)
+
+        # Put F-Frame to buffer
         buffered_octree.insert_points(points_f, selector=selector_f)
+
         logging.info("buffered_octree.root_node(depth={}, origin={}, size={})".format(
             buffered_octree.root_node.depth, buffered_octree.root_node.origin, buffered_octree.root_node.size))
+
+        # For each test depth
         for depth in depth_list:
             if buffered_octree.root_node.depth <= depth:
                 continue
             buffered_octree.root_node.clear(selector=selector_p)
+
+            # Motion Estimation
             encoding_start = time.time()
             bit_pattern_list, indices = buffered_octree.motion_estimation(depth, selector_i, selector_f)
             encoding_end = time.time()
             encoding_time = encoding_end - encoding_start
 
+            # Save File
             bytes_len = save('output.txt', depth, bit_pattern_list, indices)
 
+            # Read File
             depth, bit_pattern_list, indices = load('output.txt')
 
+            # Motion Compensation
             decoding_start = time.time()
             buffered_octree.motion_compensation(depth, bit_pattern_list, indices, selector_i, selector_p)
             decoding_end = time.time()
             decoding_time = decoding_end - decoding_start
 
+            # Analysis
             points_i_t = buffered_octree.root_node.to_points(selector=selector_i)
             points_f_t = buffered_octree.root_node.to_points(selector=selector_f)
             points_p_t = buffered_octree.root_node.to_points(selector=selector_p)

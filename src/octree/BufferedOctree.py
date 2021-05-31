@@ -49,13 +49,17 @@ class BufferedOctree(Octree):
 
     def motion_estimation(self, depth, selector_i, selector_f):
         logging.info("start")
+        # Serialize the buffer f to bit_pattern_list by specific depth D + 1, using DFS
         bit_pattern_list = self.root_node.serialize(depth=depth + 1, selector=selector_f)
+        # Motion Estimation all non empty node to indices at D depth, using DFS
         indices = self.root_node.motion_estimation(depth, selector_i, selector_f)
         logging.info("end")
         return bit_pattern_list, indices
 
     def motion_compensation(self, depth, bit_pattern_list, indices, selector_i, selector_p):
         logging.info("start")
+        # Deserialize the buffer p by bit_pattern_list, using DFS
         self.root_node.deserialize(depth=depth + 1, bit_pattern_list=bit_pattern_list, selector=selector_p)
+        # Motion Compensation all non empty node by indices, using DFS
         self.root_node.motion_compensation(depth=depth, indices=indices, selector_i=selector_i, selector_p=selector_p)
         logging.info("end")
